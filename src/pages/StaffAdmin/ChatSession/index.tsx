@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {useLoadMore} from '@umijs/hooks';
 import type {FnParams} from '@umijs/hooks/es/useLoadMore';
 import styles from './index.less'
-import {DatePicker, Empty, Form, Image, Input, message, Row, Spin, Tabs, Typography} from 'antd'
+import {DatePicker, Empty, Form, Image, Input, message, Row, Spin, Tabs, Typography, Alert, Result, Button} from 'antd'
 import {
   QueryChatMessages,
   QueryChatSessions,
@@ -21,6 +21,7 @@ import moment from "moment";
 import {PageContainer} from '@ant-design/pro-layout';
 import externalSvg from '@/assets/external.svg'
 import defaultImage from '@/assets/default-image.png'
+import {ExclamationCircleOutlined, GithubOutlined} from '@ant-design/icons';
 
 const {TabPane} = Tabs;
 
@@ -40,6 +41,7 @@ const StaffSession: React.FC = (props: any) => {
     const [searchTime, setSearchTime] = useState(["", ""])
     const [queryDepartments, setQueryDepartments] = useState([])
     const [total, setTotal] = useState(0)
+    const [msgArchiveError, setMsgArchiveError] = useState(false) // 消息存档服务错误状态
     const [msgSearchForm] = useForm()
     const [staffListForm] = useForm()
 
@@ -79,6 +81,7 @@ const StaffSession: React.FC = (props: any) => {
       setChatMessageList([])
       setChatSessionsListLoading(true)
       setChatMessageListLoading(true)
+      setMsgArchiveError(false)
       QueryChatSessions({
         page_size: 5000,
         ext_staff_id: currentStaff?.ext_staff_id,
@@ -91,7 +94,14 @@ const StaffSession: React.FC = (props: any) => {
           setChatSessionsListLoading(false)
         } else {
           message.error('会话列表获取失败')
+          if (res?.code === 10000887) {
+            setMsgArchiveError(true)
+          }
         }
+      }).catch(err => {
+        console.error('获取会话列表失败:', err)
+        setMsgArchiveError(true)
+        setChatSessionsListLoading(false)
       })
     }
 
@@ -121,10 +131,19 @@ const StaffSession: React.FC = (props: any) => {
           setChatMessageList(newMsgList || [])
           setChatMessageListLoading(false)
           setTotal(res?.data?.total)
+          setMsgArchiveError(false)
           return Promise.resolve({data: res?.data?.items || [], total: res?.data?.total})
+        }
+        if (res?.code === 10000887) {
+          setMsgArchiveError(true)
         }
         message.error('聊天消息获取失败')
         return Promise.reject(res?.message)
+      }).catch(err => {
+        console.error('获取聊天消息失败:', err)
+        setMsgArchiveError(true)
+        setChatMessageListLoading(false)
+        return Promise.reject(err)
       })
     }
 
@@ -255,7 +274,7 @@ const StaffSession: React.FC = (props: any) => {
                        {chatSession?.content_text?.length > 12 ? `${chatSession?.content_text.slice(0, 12)}...` : chatSession?.content_text}
                         </span>
                             :
-                            <span>[{msgTypeMap[chatSession?.msgtype]}消息]</span>
+                            <span>[{msgTypeMap[chatSession?.msgtype as keyof typeof msgTypeMap] || '未知'}消息]</span>
                         }
                       </div>
                     </div>
@@ -271,6 +290,42 @@ const StaffSession: React.FC = (props: any) => {
         </div>
       </>
     }
+
+    // 渲染消息存档服务不可用的提示
+    const renderMsgArchiveError = () => (
+      <Result
+        icon={<ExclamationCircleOutlined style={{ color: '#faad14' }} />}
+        title="消息存档服务不可用"
+        subTitle="会话存档功能需要独立的消息存档服务器支持，请先部署 msg-server 服务"
+        extra={[
+          <Button type="primary" key="github" icon={<GithubOutlined />} href="https://github.com/openscrm/msg-server" target="_blank">
+            查看部署文档
+          </Button>,
+          <Button key="retry" onClick={() => {
+            if (currentStaff?.ext_staff_id && currentChatType) {
+              queryChatSessions()
+            }
+          }}>
+            重试连接
+          </Button>
+        ]}
+      >
+        <div className="desc">
+          <Alert
+            message="部署说明"
+            description={
+              <div>
+                <p>1. 消息存档是企业微信提供的独立功能，需要单独的服务器进程</p>
+                <p>2. 请参考 GitHub 文档完成 msg-server 的部署配置</p>
+                <p>3. 确保消息存档服务与主服务之间网络连通</p>
+              </div>
+            }
+            type="info"
+            showIcon
+          />
+        </div>
+      </Result>
+    );
 
     return (
       <>
@@ -334,6 +389,7 @@ const StaffSession: React.FC = (props: any) => {
 
           <div className={styles.article}>
             {
+              msgArchiveError ? renderMsgArchiveError() :
               staffList.length > 0 ? <>
                   {/* 会话列表 */}
                   <div className={styles.chatListBox}>

@@ -9,7 +9,6 @@ import type {StaffAdminInterface} from '@/services/staffAdmin';
 import type {ConnectProps} from '@@/plugin-dva/connect';
 import type {ConnectState} from '@/models/connect';
 import {Area} from '@ant-design/charts';
-import type {AreaConfig} from '@ant-design/charts/es/plots/area';
 import type {GetTrendParams, SummaryResult, TrendItem} from '@/pages/StaffAdmin/Welcome/service';
 import {GetSummary, GetTrend} from '@/pages/StaffAdmin/Welcome/service';
 import type {CommonResp} from '@/services/common';
@@ -20,8 +19,8 @@ import {QuerySimpleStaffs} from '@/services/staff';
 import moment from 'moment';
 import QrcodeImage from '../../../assets/qrcode.png';
 import ChatImage from '../../../assets/chat.svg';
+import DefaultAvatar from '../../../assets/avatar-default.svg';
 import Paragraph from 'antd/es/typography/Paragraph';
-import type {ChartRefConfig} from '@ant-design/charts/es/interface';
 import Icon, {createFromIconfontCN, MessageOutlined, QrcodeOutlined, TagsOutlined} from '@ant-design/icons';
 import defaultSettings from '../../../../config/defaultSettings';
 import {isImg, isUrl} from '@/utils/utils';
@@ -66,7 +65,7 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
   const [summary, setSummary] = useState<SummaryResult>();
   const [trendItems, setTrendItems] = useState<TrendItem[]>([]);
   const formRef = useRef<FormInstance>();
-  const chartRef = useRef<ChartRefConfig>();
+  const chartRef = useRef<any>();
   const [allStaffs, setAllStaffs] = useState<StaffOption[]>([]);
   const initialValues = {
     statistic_type: 'total',
@@ -81,7 +80,7 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
     chartRef?.current?.chart?.changeSize(chartWidth, 335);
   }, [mainWidth, showSidebar, collapsed]);
 
-  const chartConfig: AreaConfig = {
+  const chartConfig: any = {
     data: trendItems,
     // @ts-ignore
     chartRef,
@@ -276,7 +275,7 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
             }}>
               <div className={styles.staffInfoBox}>
                 <img
-                  src={currentStaffAdmin?.avatar_url}
+                  src={currentStaffAdmin?.avatar_url || DefaultAvatar}
                   className={styles.avatar}
                   alt={currentStaffAdmin?.name}
                 />
@@ -290,11 +289,11 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
               <div>
                 <Typography.Paragraph style={{marginBottom: 6}}>
                   <Typography.Text style={{color: '#6b7a88'}}>企业名称：</Typography.Text>
-                  <Typography.Text>成都小橘科技有限公司</Typography.Text>
+                  <Typography.Text>早麓科技</Typography.Text>
                 </Typography.Paragraph>
                 <Typography.Paragraph style={{marginBottom: 0}}>
                   <Typography.Text style={{color: '#6b7a88'}}>员工总数：</Typography.Text>
-                  <Typography.Text>12</Typography.Text>
+                  <Typography.Text>{summary?.total_staffs_num || '-'}</Typography.Text>
                 </Typography.Paragraph>
               </div>
             </ProCard>
@@ -412,6 +411,8 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
 
             <ProCard.Group hidden={!showSidebar} colSpan={'300px'} style={{padding: '0 4px'}} ghost={true}
                            direction={'column'}>
+              {/* 隐藏OpenSCRM开源私域流量管理系统卡片 */}
+              {/*
               <ProCard title={<h4 style={{fontSize: 15}}>OpenSCRM开源私域流量管理系统</h4>} bordered={true}
                        bodyStyle={{paddingTop: 10}}>
                 <Row gutter={2}>
@@ -430,6 +431,7 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
                   </Col>
                 </Row>
               </ProCard>
+              */}
 
               <ProCard title={'消息存档'} bordered={true} style={{marginTop: 8}} bodyStyle={{paddingTop: 12}}>
                 <Row gutter={2}>
@@ -441,9 +443,12 @@ const Welcome: React.FC<WelcomeProps> = (props) => {
                   <Col span={12}>
                     <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'end'}}>
                       <Paragraph type={'secondary'}>轻松了解员工和客户的沟通过程</Paragraph>
+                      <Paragraph type={'warning'} style={{fontSize: '12px', marginBottom: 8}}>
+                        需要独立部署 msg-server 服务
+                      </Paragraph>
                       <Button type={'primary'} onClick={() => {
                         history.push('/staff-admin/corp-risk-control/chat-session');
-                      }}>立即使用</Button>
+                      }}>查看详情</Button>
                     </div>
                   </Col>
                 </Row>
